@@ -29,7 +29,7 @@ const refundActionSchema = z.object({
 const ineligibleResponses = {
   "no-purchase": { message: "You have not bought this course.", status: 403 },
   "refund-request-requested": {
-    message: "You already have a request open on this purchase.",
+    message: "You already have a refund request waiting for review on this purchase.",
     status: 409,
   },
   "claimed-team-seat": {
@@ -45,8 +45,7 @@ const ineligibleResponses = {
     status: 403,
   },
   "completion-limit": {
-    message:
-      "You have completed too many lessons of this course to make a Refund Request.",
+    message: "You have completed too many lessons of this course to cancel it.",
     status: 403,
   },
 } satisfies Record<RefundIneligibleReason, { message: string; status: number }>;
@@ -59,7 +58,7 @@ function getCourseBySlug(slug: string) {
  * The confirmation the learner gets in their inbox. There is no mail
  * transport wired up yet, so the built message goes to the server log.
  */
-function buildReversalEmail(input: {
+function buildRefundRequestEmail(input: {
   learnerName: string;
   learnerEmail: string;
   courseTitle: string;
@@ -67,14 +66,14 @@ function buildReversalEmail(input: {
 }) {
   return {
     to: input.learnerEmail,
-    subject: `Reversal requested — ${input.courseTitle}`,
+    subject: `Refund requested — ${input.courseTitle}`,
     body: [
       `Hi ${input.learnerName},`,
       "",
-      `We have your Reversal request for "${input.courseTitle}".`,
-      `The Reversal is for ${formatPrice(input.amount)}, the amount you paid.`,
+      `We have your refund request for "${input.courseTitle}".`,
+      `The refund is for ${formatPrice(input.amount)}, the amount you paid.`,
       "",
-      "Our team reviews every Reversal by hand. You do not need to do anything else — we will email you again when it is done.",
+      "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
       "",
       "— The Cadence team",
     ].join("\n"),
@@ -136,7 +135,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     .returning()
     .get();
 
-  const email = buildReversalEmail({
+  const email = buildRefundRequestEmail({
     learnerName: learner.name,
     learnerEmail: learner.email,
     courseTitle: course.title,

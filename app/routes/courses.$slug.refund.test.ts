@@ -81,8 +81,7 @@ describe("refund action", () => {
       .run();
 
     expect(await rejectionOf(postRefundRequest())).toEqual({
-      message:
-        "You have completed too many lessons of this course to make a Refund Request.",
+      message: "You have completed too many lessons of this course to cancel it.",
       status: 403,
     });
     expect(testDb.select().from(schema.refunds).all()).toEqual([]);
