@@ -48,7 +48,6 @@ import { resolveCountry } from "~/lib/country.server";
 import {
   calculatePppPrice,
   getCountryTierInfo,
-  getDiscountForCountry,
 } from "~/lib/ppp";
 import { parseFormData } from "~/lib/validation";
 import { MAX_RATING, MIN_RATING } from "~/lib/ratings";
@@ -367,20 +366,12 @@ function rateCourse(userId: number, courseId: number, rating: number) {
  * What the learner would get back if they made a Refund Request now, or null
  * if the purchase does not have Refund Eligibility.
  */
-function getRefundRequestTerms(
-  userId: number,
-  course: { id: number; price: number }
-) {
-  const eligibility = getRefundEligibility(userId, course.id);
+function getRefundRequestTerms(userId: number, courseId: number) {
+  const eligibility = getRefundEligibility(userId, courseId);
 
   if (!eligibility.eligible) return null;
 
-  const { purchase, lastDayOfRefundWindow } = eligibility;
-
-  // A purchasing-power price is given back at the price that was paid, not at
-  // the list price of the course.
-  const pppDiscount = getDiscountForCountry(purchase.country);
-  const refundableAmount = pppDiscount > 0 ? purchase.amountPaid : course.price;
+  const { refundableAmount, lastDayOfRefundWindow } = eligibility;
 
   return { refundableAmount, lastDayOfRefundWindow };
 }
@@ -423,10 +414,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     enrolled = isUserEnrolled(currentUserId, course.id);
 
     if (enrolled) {
-      refundRequestTerms = getRefundRequestTerms(currentUserId, {
-        id: course.id,
-        price: courseWithDetails.price,
-      });
+      refundRequestTerms = getRefundRequestTerms(currentUserId, course.id);
 
       progress = calculateProgress(currentUserId, course.id, false);
 

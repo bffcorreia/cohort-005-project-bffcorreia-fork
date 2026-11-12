@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
+import { eq } from "drizzle-orm";
 
 let testDb: ReturnType<typeof createTestDb>;
 vi.mock("~/db", () => ({
@@ -21,13 +22,20 @@ function daysAfterPurchase(days: number, hours = 12) {
   return new Date(2026, 2, 1 + days, hours, 0, 0);
 }
 
-function buy(createdAt = PURCHASED_AT) {
+function buy(
+  createdAt = PURCHASED_AT,
+  {
+    amountPaid = 4900,
+    country = null,
+  }: { amountPaid?: number; country?: string | null } = {}
+) {
   return testDb
     .insert(schema.purchases)
     .values({
       userId: base.user.id,
       courseId: base.course.id,
-      amountPaid: 4900,
+      amountPaid,
+      country,
       createdAt: createdAt.toISOString(),
     })
     .returning()
@@ -70,6 +78,7 @@ describe("getRefundEligibility", () => {
       eligible: true,
       purchase,
       lastDayOfRefundWindow: "2026-03-15",
+      refundableAmount: 4900,
     });
   });
 
@@ -77,6 +86,46 @@ describe("getRefundEligibility", () => {
     expect(
       getRefundEligibility(base.user.id, base.course.id, daysAfterPurchase(0))
     ).toEqual({ eligible: false, reason: "no-purchase" });
+  });
+
+  describe("the Refundable Amount", () => {
+    function setListPrice(price: number) {
+      testDb
+        .update(schema.courses)
+        .set({ price })
+        .where(eq(schema.courses.id, base.course.id))
+        .run();
+    }
+
+    function refundableAmount() {
+      const eligibility = getRefundEligibility(
+        base.user.id,
+        base.course.id,
+        daysAfterPurchase(1)
+      );
+      return eligibility.eligible ? eligibility.refundableAmount : null;
+    }
+
+    it("is what was paid when the purchase was below the list price", () => {
+      setListPrice(7900);
+      buy(PURCHASED_AT, { amountPaid: 4900, country: "US" });
+
+      expect(refundableAmount()).toBe(4900);
+    });
+
+    it("is what was paid when the full list price was paid", () => {
+      setListPrice(7900);
+      buy(PURCHASED_AT, { amountPaid: 7900, country: "US" });
+
+      expect(refundableAmount()).toBe(7900);
+    });
+
+    it("is what was paid for a purchasing-power price", () => {
+      setListPrice(7900);
+      buy(PURCHASED_AT, { amountPaid: 3950, country: "IN" });
+
+      expect(refundableAmount()).toBe(3950);
+    });
   });
 
   describe("the Refund Window", () => {

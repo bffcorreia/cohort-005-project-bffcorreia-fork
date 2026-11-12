@@ -6,7 +6,6 @@ import { db } from "~/db";
 import { courses, refunds, users, RefundStatus } from "~/db/schema";
 import { eq } from "drizzle-orm";
 import { parseFormData, parseParams } from "~/lib/validation";
-import { getDiscountForCountry } from "~/lib/ppp";
 import { formatPrice } from "~/lib/utils";
 import {
   REFUND_WINDOW_DAYS,
@@ -111,12 +110,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     throw data(message, { status });
   }
 
-  const { purchase } = eligibility;
-
-  // A purchase made at a purchasing-power price is given back at that price,
-  // not at the list price of the course.
-  const pppDiscount = getDiscountForCountry(purchase.country);
-  const refundableAmount = pppDiscount > 0 ? purchase.amountPaid : course.price;
+  const { purchase, refundableAmount } = eligibility;
 
   const formData = await request.formData();
   const parsed = parseFormData(formData, refundActionSchema);

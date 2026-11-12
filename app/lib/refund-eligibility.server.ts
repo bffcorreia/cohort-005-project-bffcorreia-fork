@@ -126,6 +126,7 @@ export type RefundEligibility =
       eligible: true;
       purchase: typeof purchases.$inferSelect;
       lastDayOfRefundWindow: string;
+      refundableAmount: number;
     }
   | { eligible: false; reason: RefundIneligibleReason };
 
@@ -172,5 +173,11 @@ export function getRefundEligibility(
     return ineligible("completion-limit");
   }
 
-  return { eligible: true, purchase, lastDayOfRefundWindow };
+  // The Refundable Amount is always exactly what was paid for the purchase.
+  return {
+    eligible: true,
+    purchase,
+    lastDayOfRefundWindow,
+    refundableAmount: purchase.amountPaid,
+  };
 }
