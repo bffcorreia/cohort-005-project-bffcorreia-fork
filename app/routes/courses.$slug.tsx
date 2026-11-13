@@ -909,8 +909,8 @@ function RefundRequestForm({
     <div className="border-t pt-4">
       <p className="mb-2 text-sm font-medium">Cancel my purchase</p>
       <p className="mb-3 text-xs text-muted-foreground">
-        We will send {formatPrice(refundableAmount)} back to the card you paid with, once
-        someone has read your note.
+        Someone will read your note. If we approve your request, we will send{" "}
+        {formatPrice(refundableAmount)} back to the card you paid with.
       </p>
       <fetcher.Form
         method="post"

@@ -129,7 +129,7 @@ describe("getRefundEligibility", () => {
   });
 
   describe("the Refund Window", () => {
-    it("is still open on the 14th day after the purchase day, up to midnight", () => {
+    it("still allows a Refund Request on the 14th day after the purchase day, up to midnight", () => {
       buy();
 
       expect(

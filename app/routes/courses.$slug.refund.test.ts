@@ -81,9 +81,30 @@ describe("refund action", () => {
       .run();
 
     expect(await rejectionOf(postRefundRequest())).toEqual({
-      message: "You have completed too many lessons of this course to cancel it.",
+      message: "You have completed too many lessons of this course to request a refund.",
       status: 403,
     });
     expect(testDb.select().from(schema.refunds).all()).toEqual([]);
+  });
+
+  it("emails the learner a Refund Request confirmation for the Refundable Amount", async () => {
+    testDb
+      .insert(schema.purchases)
+      .values({
+        userId: base.user.id,
+        courseId: base.course.id,
+        amountPaid: 4900,
+      })
+      .run();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await postRefundRequest();
+
+    const email = log.mock.calls.map(([line]) => String(line)).join("\n");
+    log.mockRestore();
+    expect(email).toContain("subject=Refund requested — Test Course");
+    expect(email).toContain("$49.00");
+    expect(email).not.toMatch(/reversal/i);
+    expect(email).not.toMatch(/the refund is for/i);
   });
 });

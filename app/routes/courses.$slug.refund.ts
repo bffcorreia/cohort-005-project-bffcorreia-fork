@@ -21,7 +21,7 @@ const refundActionSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(10, "Tell us a little more about why you want to cancel.")
+    .min(10, "Tell us a little more about why you want a refund.")
     .max(1000, "Please keep your reason under 1000 characters."),
 });
 
@@ -32,7 +32,7 @@ const ineligibleResponses = {
     status: 409,
   },
   "claimed-team-seat": {
-    message: "A claimed team seat cannot be cancelled.",
+    message: "You cannot request a refund for a claimed team seat.",
     status: 403,
   },
   "outside-refund-window": {
@@ -40,11 +40,11 @@ const ineligibleResponses = {
     status: 403,
   },
   "watch-limit": {
-    message: "You have watched too much of this course to cancel it.",
+    message: "You have watched too much of this course to request a refund.",
     status: 403,
   },
   "completion-limit": {
-    message: "You have completed too many lessons of this course to cancel it.",
+    message: "You have completed too many lessons of this course to request a refund.",
     status: 403,
   },
 } satisfies Record<RefundIneligibleReason, { message: string; status: number }>;
@@ -61,7 +61,7 @@ function buildRefundRequestEmail(input: {
   learnerName: string;
   learnerEmail: string;
   courseTitle: string;
-  amount: number;
+  refundableAmount: number;
 }) {
   return {
     to: input.learnerEmail,
@@ -70,7 +70,7 @@ function buildRefundRequestEmail(input: {
       `Hi ${input.learnerName},`,
       "",
       `We have your refund request for "${input.courseTitle}".`,
-      `The refund is for ${formatPrice(input.amount)}, the amount you paid.`,
+      `If it is approved, you will get back ${formatPrice(input.refundableAmount)}, the amount you paid.`,
       "",
       "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
       "",
@@ -83,7 +83,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   const currentUserId = await getCurrentUserId(request);
 
   if (!currentUserId) {
-    throw data("You must be logged in to cancel a purchase.", { status: 401 });
+    throw data("You must be logged in to request a refund.", { status: 401 });
   }
 
   const { slug } = parseParams(params, refundParamsSchema);
@@ -133,7 +133,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     learnerName: learner.name,
     learnerEmail: learner.email,
     courseTitle: course.title,
-    amount: refundableAmount,
+    refundableAmount,
   });
 
   console.log(
